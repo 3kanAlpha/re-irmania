@@ -40,7 +40,7 @@
 - `hide_score_hr`: int2, not null
   - 0以上の値を設定すると、大会の開催終了n時間前から大会終了まで、参加者は自分以外のユーザーが提出したスコアを閲覧できなくなる
 
-## public.scores
+## public.score
 登録されているスコア一覧
 
 - id: identity

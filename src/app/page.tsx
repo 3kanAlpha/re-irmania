@@ -264,59 +264,73 @@ function TournamentCard({
   kind: "current" | "upcoming" | "finished";
   tournament: Tournament;
 }) {
+  const detailHref = `/comp/${tournament.id}`;
+
   if (kind === "current") {
     return (
-      <article className="rounded-lg border border-sky-500/30 bg-sky-50/80 p-4 shadow-sm shadow-sky-900/5 dark:bg-sky-900/25">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="mb-2 inline-flex rounded-full bg-sky-600 px-2.5 py-1 text-xs font-medium text-white">
-              開催中
+      <Link
+        href={detailHref}
+        className="block rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <article className="rounded-lg border border-sky-500/30 bg-sky-50/80 p-4 shadow-sm shadow-sky-900/5 transition-colors hover:border-sky-600/50 hover:bg-sky-100/80 dark:bg-sky-900/25 dark:hover:bg-sky-900/35">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="mb-2 inline-flex rounded-full bg-sky-600 px-2.5 py-1 text-xs font-medium text-white">
+                開催中
+              </div>
+              <h4 className="text-2xl font-semibold leading-tight break-words">
+                {tournament.name}
+              </h4>
             </div>
-            <h4 className="text-2xl font-semibold leading-tight break-words">
-              {tournament.name}
-            </h4>
+            <div className="shrink-0 text-right text-sm font-medium text-sky-900 dark:text-sky-100">
+              {formatEndLabel(tournament.open_until)}
+            </div>
           </div>
-          <div className="shrink-0 text-right text-sm font-medium text-sky-900 dark:text-sky-100">
-            {formatEndLabel(tournament.open_until)}
+          <div className="mt-4 min-w-0 rounded-lg bg-background/80 px-4 py-3 ring-1 ring-foreground/10">
+            <p className="text-xs text-muted-foreground">課題曲</p>
+            <p className="mt-1 text-xl font-semibold leading-tight break-words">
+              {tournament.song_title} [{tournament.difficulty}]
+            </p>
           </div>
-        </div>
-        <div className="mt-4 min-w-0 rounded-lg bg-background/80 px-4 py-3 ring-1 ring-foreground/10">
-          <p className="text-xs text-muted-foreground">課題曲</p>
-          <p className="mt-1 text-xl font-semibold leading-tight break-words">
-            {tournament.song_title} [{tournament.difficulty}]
-          </p>
-        </div>
-        <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
-          <TournamentDetail label="ゲーム" value={tournament.game_title} />
-          <TournamentDetail label="期間" value={formatPeriod(tournament)} />
-        </dl>
-      </article>
+          <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+            <TournamentDetail label="ゲーム" value={tournament.game_title} />
+            <TournamentDetail label="期間" value={formatPeriod(tournament)} />
+          </dl>
+        </article>
+      </Link>
     );
   }
 
   const showSong = kind === "finished";
 
   return (
-    <article className="rounded-lg border border-border bg-card px-3 py-3 text-sm">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h4 className="text-lg font-medium leading-tight">
-            {tournament.name}
-          </h4>
-          <p className="mt-1 text-muted-foreground">{tournament.game_title}</p>
+    <Link
+      href={detailHref}
+      className="block rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
+      <article className="rounded-lg border border-border bg-card px-3 py-3 text-sm transition-colors hover:bg-muted/50">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h4 className="text-lg font-medium leading-tight">
+              {tournament.name}
+            </h4>
+            <p className="mt-1 text-muted-foreground">
+              {tournament.game_title}
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {kind === "upcoming"
+              ? formatPeriod(tournament)
+              : formatEndLabel(tournament.open_until)}
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {kind === "upcoming"
-            ? formatPeriod(tournament)
-            : formatEndLabel(tournament.open_until)}
-        </p>
-      </div>
-      {showSong ? (
-        <p className="mt-2 text-muted-foreground">
-          {tournament.song_title} [{tournament.difficulty}]
-        </p>
-      ) : null}
-    </article>
+        {showSong ? (
+          <p className="mt-2 text-muted-foreground">
+            {tournament.song_title} [{tournament.difficulty}]
+          </p>
+        ) : null}
+      </article>
+    </Link>
   );
 }
 
