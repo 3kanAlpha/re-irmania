@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 
@@ -42,15 +43,41 @@ export default async function Home() {
         </a>
       </div>
       <div className="mt-6 pl-4">
-        <p className="text-sm">
-          スコア登録のやり方:
-          <br />
-          1. ログインページからログインする。
-          <br />
-          2. アカウント設定ページから名前を登録する。
-          <br />
-          3. 各大会のページからスコアを登録する。
-        </p>
+        {isLoggedIn ? (
+          <p className="text-sm">
+            スコア登録のやり方:
+            <br />
+            1. ログインページからログインする。
+            <br />
+            2.{" "}
+            <Link
+              href="/dashboard"
+              className="text-sky-600 dark:text-sky-400 hover:underline"
+            >
+              アカウント設定ページ
+            </Link>
+            から名前を登録する。
+            <br />
+            3. 各大会のページからスコアを登録する。
+          </p>
+        ) : (
+          <p className="text-sm">
+            スコア登録のやり方:
+            <br />
+            1.{" "}
+            <Link
+              href="/auth/sign-in"
+              className="text-sky-600 dark:text-sky-400 hover:underline"
+            >
+              ログインページ
+            </Link>
+            からログインする。
+            <br />
+            2. アカウント設定ページから名前を登録する。
+            <br />
+            3. 各大会のページからスコアを登録する。
+          </p>
+        )}
       </div>
       <div className="mt-6 text-center">
         {isLoggedIn ? "ログイン済み" : "未ログイン"}
