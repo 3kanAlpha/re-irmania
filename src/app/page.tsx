@@ -1,21 +1,26 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function Home() {
-  const supabase = await createClient();
-  const { data: tournaments } = await supabase
-    .from("tournaments")
-    .select()
-    .order("id", { ascending: false })
-    .limit(5);
+type Tournament = {
+  id: number;
+  name: string;
+  game_title: string;
+  song_title: string;
+  difficulty: string;
+  open_since: string;
+  open_until: string;
+};
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const isLoggedIn = user != null;
+type TournamentGroups = {
+  current: Tournament[];
+  upcoming: Tournament[];
+  finished: Tournament[];
+};
 
+export default function Home() {
   return (
     <div className="w-full max-w-3xl mx-auto py-6 px-3">
       <div>
@@ -42,51 +47,326 @@ export default async function Home() {
           </Button>
         </a>
       </div>
-      <div className="mt-6 pl-4">
-        {isLoggedIn ? (
-          <p className="text-sm">
-            スコア登録のやり方:
-            <br />
-            1. ログインページからログインする。
-            <br />
-            2.{" "}
-            <Link
-              href="/dashboard"
-              className="text-sky-600 dark:text-sky-400 hover:underline"
-            >
-              アカウント設定ページ
-            </Link>
-            から名前を登録する。
-            <br />
-            3. 各大会のページからスコアを登録する。
-          </p>
-        ) : (
-          <p className="text-sm">
-            スコア登録のやり方:
-            <br />
-            1.{" "}
-            <Link
-              href="/auth/sign-in"
-              className="text-sky-600 dark:text-sky-400 hover:underline"
-            >
-              ログインページ
-            </Link>
-            からログインする。
-            <br />
-            2. アカウント設定ページから名前を登録する。
-            <br />
-            3. 各大会のページからスコアを登録する。
-          </p>
-        )}
-      </div>
-      <div className="mt-6 text-center">
-        {isLoggedIn ? "ログイン済み" : "未ログイン"}
-      </div>
+      <Suspense fallback={<AuthGuideSkeleton />}>
+        <AuthGuide />
+      </Suspense>
       <div className="mt-6">
-        <pre>{JSON.stringify(tournaments, null, 2)}</pre>
+        <Suspense fallback={<TournamentSectionSkeleton />}>
+          <TournamentSection />
+        </Suspense>
       </div>
     </div>
   );
+}
+
+async function AuthGuide() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isLoggedIn = user != null;
+
+  return (
+    <div className="mt-6 pl-4">
+      {isLoggedIn ? (
+        <p className="text-sm">
+          スコア登録のやり方:
+          <br />
+          1. ログインページからログインする。
+          <br />
+          2.{" "}
+          <Link
+            href="/dashboard"
+            className="text-sky-600 dark:text-sky-400 hover:underline"
+          >
+            アカウント設定ページ
+          </Link>
+          から名前を登録する。
+          <br />
+          3. 各大会のページからスコアを登録する。
+        </p>
+      ) : (
+        <p className="text-sm">
+          スコア登録のやり方:
+          <br />
+          1.{" "}
+          <Link
+            href="/auth/sign-in"
+            className="text-sky-600 dark:text-sky-400 hover:underline"
+          >
+            ログインページ
+          </Link>
+          からログインする。
+          <br />
+          2. アカウント設定ページから名前を登録する。
+          <br />
+          3. 各大会のページからスコアを登録する。
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AuthGuideSkeleton() {
+  return (
+    <>
+      <div className="mt-6 pl-4">
+        <div className="h-20 rounded-md bg-muted/70" />
+      </div>
+      <div className="mt-6 flex justify-center">
+        <div className="h-5 w-24 rounded bg-muted/70" />
+      </div>
+    </>
+  );
+}
+
+async function TournamentSection() {
+  const groups = await getTournamentGroups();
+
+  return (
+    <section aria-labelledby="tournaments-heading" className="space-y-6">
+      <div>
+        <h2 id="tournaments-heading" className="text-xl font-semibold">
+          大会を探す
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          現在参加できる大会を中心に表示しています。
+        </p>
+      </div>
+
+      <TournamentGroup
+        emptyText="現在開催中の大会はありません。"
+        kind="current"
+        tournaments={groups.current}
+        title="開催中の大会"
+      />
+      <TournamentGroup
+        emptyText="開催予定の大会はありません。"
+        kind="upcoming"
+        tournaments={groups.upcoming}
+        title="開催予定の大会"
+      />
+      <TournamentGroup
+        emptyText="終了済みの大会はありません。"
+        kind="finished"
+        tournaments={groups.finished}
+        title="終了済みの大会"
+      />
+    </section>
+  );
+}
+
+async function getTournamentGroups(): Promise<TournamentGroups> {
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+  const tournamentColumns =
+    "id,name,desc,game_title,song_title,difficulty,open_since,open_until";
+
+  const [current, upcoming, finished] = await Promise.all([
+    supabase
+      .from("tournaments")
+      .select(tournamentColumns)
+      .lte("open_since", now)
+      .gte("open_until", now)
+      .order("open_until", { ascending: true })
+      .limit(5),
+    supabase
+      .from("tournaments")
+      .select(tournamentColumns)
+      .gt("open_since", now)
+      .order("open_since", { ascending: true })
+      .limit(5),
+    supabase
+      .from("tournaments")
+      .select(tournamentColumns)
+      .lt("open_until", now)
+      .order("id", { ascending: false })
+      .limit(5),
+  ]);
+
+  if (current.error != null) {
+    throw new Error(current.error.message);
+  }
+  if (upcoming.error != null) {
+    throw new Error(upcoming.error.message);
+  }
+  if (finished.error != null) {
+    throw new Error(finished.error.message);
+  }
+
+  return {
+    current: (current.data ?? []) as Tournament[],
+    upcoming: (upcoming.data ?? []) as Tournament[],
+    finished: (finished.data ?? []) as Tournament[],
+  };
+}
+
+function TournamentGroup({
+  emptyText,
+  kind,
+  title,
+  tournaments,
+}: {
+  emptyText: string;
+  kind: "current" | "upcoming" | "finished";
+  title: string;
+  tournaments: Tournament[];
+}) {
+  const isCurrent = kind === "current";
+
+  return (
+    <section
+      aria-labelledby={`${kind}-tournaments-heading`}
+      className={isCurrent ? "space-y-3" : "space-y-2"}
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <h3
+          id={`${kind}-tournaments-heading`}
+          className={
+            isCurrent ? "text-lg font-semibold" : "text-base font-medium"
+          }
+        >
+          {title}
+        </h3>
+        <span className="text-xs text-muted-foreground">
+          {tournaments.length}件
+        </span>
+      </div>
+      {tournaments.length > 0 ? (
+        <div className={isCurrent ? "space-y-3" : "grid gap-2"}>
+          {tournaments.map((tournament) => (
+            <TournamentCard
+              key={tournament.id}
+              kind={kind}
+              tournament={tournament}
+            />
+          ))}
+        </div>
+      ) : (
+        <p
+          className={
+            isCurrent
+              ? "rounded-lg border border-dashed border-border bg-muted/40 px-4 py-5 text-center text-sm text-muted-foreground"
+              : "text-sm text-muted-foreground"
+          }
+        >
+          {emptyText}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function TournamentCard({
+  kind,
+  tournament,
+}: {
+  kind: "current" | "upcoming" | "finished";
+  tournament: Tournament;
+}) {
+  if (kind === "current") {
+    return (
+      <article className="rounded-lg border border-sky-500/30 bg-sky-50/80 p-4 shadow-sm shadow-sky-900/5 dark:bg-sky-900/25">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="mb-2 inline-flex rounded-full bg-sky-600 px-2.5 py-1 text-xs font-medium text-white">
+              開催中
+            </div>
+            <h4 className="text-2xl font-semibold leading-tight break-words">
+              {tournament.name}
+            </h4>
+          </div>
+          <div className="shrink-0 text-right text-sm font-medium text-sky-900 dark:text-sky-100">
+            {formatEndLabel(tournament.open_until)}
+          </div>
+        </div>
+        <div className="mt-4 min-w-0 rounded-lg bg-background/80 px-4 py-3 ring-1 ring-foreground/10">
+          <p className="text-xs text-muted-foreground">課題曲</p>
+          <p className="mt-1 text-xl font-semibold leading-tight break-words">
+            {tournament.song_title} [{tournament.difficulty}]
+          </p>
+        </div>
+        <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+          <TournamentDetail label="ゲーム" value={tournament.game_title} />
+          <TournamentDetail label="期間" value={formatPeriod(tournament)} />
+        </dl>
+      </article>
+    );
+  }
+
+  const showSong = kind === "finished";
+
+  return (
+    <article className="rounded-lg border border-border bg-card px-3 py-3 text-sm">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h4 className="text-lg font-medium leading-tight">
+            {tournament.name}
+          </h4>
+          <p className="mt-1 text-muted-foreground">{tournament.game_title}</p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {kind === "upcoming"
+            ? formatPeriod(tournament)
+            : formatEndLabel(tournament.open_until)}
+        </p>
+      </div>
+      {showSong ? (
+        <p className="mt-2 text-muted-foreground">
+          {tournament.song_title} [{tournament.difficulty}]
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
+function TournamentDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-background/70 px-3 py-2 ring-1 ring-foreground/10">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-1 font-medium">{value}</dd>
+    </div>
+  );
+}
+
+function TournamentSectionSkeleton() {
+  return (
+    <section className="space-y-5" aria-label="大会を読み込み中">
+      <div>
+        <div className="h-7 w-14 rounded bg-muted/70" />
+        <div className="mt-2 h-4 w-60 max-w-full rounded bg-muted/70" />
+      </div>
+      <div className="space-y-3">
+        <div className="h-6 w-32 rounded bg-muted/70" />
+        <div className="h-44 rounded-lg border border-border bg-muted/40" />
+      </div>
+      <div className="grid gap-2">
+        <div className="h-5 w-36 rounded bg-muted/70" />
+        <div className="h-20 rounded-lg border border-border bg-muted/40" />
+      </div>
+    </section>
+  );
+}
+
+function formatPeriod(tournament: Tournament) {
+  const start = formatDateTime(tournament.open_since);
+  const end = formatDateTime(tournament.open_until);
+
+  return `${start} - ${end}`;
+}
+
+function formatEndLabel(openUntil: string) {
+  return `${formatDateTime(openUntil)} 終了`;
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Tokyo",
+  }).format(new Date(value));
 }
 
 function GitHubInvertocatIcon() {

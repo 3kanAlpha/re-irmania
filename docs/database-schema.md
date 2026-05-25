@@ -21,7 +21,7 @@
   - 大会を開催する楽曲名
 - `difficulty`: text, not null
   - 大会で使用する譜面難易度
-- `open_until`: timestamptz
+- `open_until`: timestamptz, not null
   - 大会の終了時刻
 - `passwd`: text
   - パスワード付きのプレイベート大会で設定されるSHA-256ハッシュ化パスワード
