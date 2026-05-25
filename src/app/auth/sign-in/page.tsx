@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
@@ -25,6 +26,10 @@ type SignInPageProps = {
   searchParams?: Promise<{
     error?: string;
   }>;
+};
+
+export const metadata: Metadata = {
+  title: "ログイン",
 };
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {

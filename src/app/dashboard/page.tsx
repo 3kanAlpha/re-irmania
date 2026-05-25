@@ -1,4 +1,5 @@
 import { LogOut } from "lucide-react";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +12,11 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { NicknameForm } from "./_components/nickname-form";
 import { signOut } from "./_lib/actions";
+
+export const metadata: Metadata = {
+  title: "ダッシュボード",
+  description: "アカウントの設定などを変更できます。",
+};
 
 export default async function DashboardPage() {
   const supabase = await createClient();
