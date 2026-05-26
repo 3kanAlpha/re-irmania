@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime } from "@/lib/date-utils";
 import { createClient } from "@/lib/supabase/server";
 
@@ -112,10 +113,10 @@ function AuthGuideSkeleton() {
   return (
     <>
       <div className="mt-6 pl-4">
-        <div className="h-20 rounded-md bg-muted/70" />
+        <Skeleton className="h-20" />
       </div>
       <div className="mt-6 flex justify-center">
-        <div className="h-5 w-24 rounded bg-muted/70" />
+        <Skeleton className="h-5 w-24" />
       </div>
     </>
   );
@@ -349,16 +350,16 @@ function TournamentSectionSkeleton() {
   return (
     <section className="space-y-5" aria-label="大会を読み込み中">
       <div>
-        <div className="h-7 w-14 rounded bg-muted/70" />
-        <div className="mt-2 h-4 w-60 max-w-full rounded bg-muted/70" />
+        <Skeleton className="h-7 w-14" />
+        <Skeleton className="mt-2 h-4 w-60 max-w-full" />
       </div>
       <div className="space-y-3">
-        <div className="h-6 w-32 rounded bg-muted/70" />
-        <div className="h-44 rounded-lg border border-border bg-muted/40" />
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-44 rounded-lg border border-border" />
       </div>
       <div className="grid gap-2">
-        <div className="h-5 w-36 rounded bg-muted/70" />
-        <div className="h-20 rounded-lg border border-border bg-muted/40" />
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="h-20 rounded-lg border border-border" />
       </div>
     </section>
   );
