@@ -69,7 +69,6 @@ export function SubmitScoreForm({
             required
             disabled={pending}
             aria-invalid={Boolean(scoreErrors.length)}
-            placeholder="例: 123456"
           />
           <FieldError errors={scoreErrors} />
         </Field>
@@ -157,7 +156,6 @@ export function SubmitScoreForm({
             maxLength={COMMENT_MAX_LENGTH}
             disabled={pending}
             aria-invalid={Boolean(commentErrors.length)}
-            placeholder="コメントを入力してください"
           />
           <FieldDescription>
             {COMMENT_MAX_LENGTH}文字以内で入力してください。（任意）
@@ -197,14 +195,19 @@ export function SubmitScoreForm({
           </p>
         ) : null}
 
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-          <Button asChild variant="outline">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href={`/comp/${tournamentId}`}>
               <ArrowLeft />
               大会トップへ戻る
             </Link>
           </Button>
-          <Button type="submit" disabled={pending} className="sm:min-w-40">
+          <Button
+            type="submit"
+            size="lg"
+            disabled={pending}
+            className="h-12 w-full text-base sm:h-10 sm:min-w-44 sm:w-auto sm:text-sm"
+          >
             <Upload />
             {pending ? "送信中…" : "スコアを提出"}
           </Button>
