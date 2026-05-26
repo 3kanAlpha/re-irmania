@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { Geist_Mono, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "@/components/feature/common/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const notoSansJp = Noto_Sans_JP({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
@@ -36,10 +34,9 @@ export default function RootLayout({
       className={cn(
         "h-full",
         "antialiased",
-        geistSans.variable,
+        notoSansJp.variable,
         geistMono.variable,
         "font-sans",
-        inter.variable,
       )}
       suppressHydrationWarning
     >
