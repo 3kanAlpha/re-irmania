@@ -1,4 +1,4 @@
-import { Crown, ExternalLink } from "lucide-react";
+import { Crown, ExternalLink, Lock } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { createClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 
 type Tournament = {
   id: number;
@@ -22,10 +23,13 @@ type Tournament = {
   open_since: string;
   open_until: string;
   asc_order: boolean | null;
+  alt_rank: boolean | null;
+  hide_score_hr: number;
 };
 
 type ScoreRow = {
   id: number;
+  user_uid: string;
   score: number;
   updated_at: string | null;
   created_at: string;
@@ -36,12 +40,14 @@ type ScoreRow = {
 
 type RankingScore = {
   id: number;
-  rank: number;
+  userUid: string;
+  rank: number | null;
   nickname: string;
   score: number;
   updatedAt: string;
   imageUrl: string | null;
   comment: string | null;
+  isCurrentUser: boolean;
 };
 
 type CompetitionPageProps = {
@@ -80,7 +86,8 @@ export default async function CompetitionPage({
     notFound();
   }
 
-  const { tournament, ranking } = await getCompetition(id);
+  const { tournament, ranking, participantCount, isScoreHidden } =
+    await getCompetition(id);
 
   return (
     <main className="mx-auto w-full max-w-5xl px-3 py-6 sm:px-4">
@@ -130,9 +137,15 @@ export default async function CompetitionPage({
               ランキング
             </h2>
             <p className="text-xs text-muted-foreground">
-              {ranking.length}人の参加者
+              {participantCount}人の参加者
             </p>
           </div>
+          {isScoreHidden && (
+            <p className="inline-flex items-center gap-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+              <Lock className="size-4 shrink-0" />
+              大会終了直前のため、他プレイヤーのスコアは閲覧できません。
+            </p>
+          )}
 
           {ranking.length > 0 ? (
             <div className="rounded-lg border">
@@ -149,9 +162,17 @@ export default async function CompetitionPage({
                 </TableHeader>
                 <TableBody>
                   {ranking.map((score) => (
-                    <TableRow key={score.id}>
+                    <TableRow
+                      key={score.id}
+                      className={cn(
+                        score.isCurrentUser &&
+                          "bg-sky-50/80 hover:bg-sky-50 dark:bg-sky-950/40 dark:hover:bg-sky-950/50",
+                      )}
+                    >
                       <TableCell className="text-center font-medium">
-                        {score.rank === 1 ? (
+                        {score.rank == null ? (
+                          "?"
+                        ) : score.rank === 1 ? (
                           <div className="flex justify-center">
                             <Crown className="text-amber-500 dark:text-amber-400" />
                           </div>
@@ -159,7 +180,13 @@ export default async function CompetitionPage({
                           score.rank
                         )}
                       </TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell
+                        className={cn(
+                          "font-medium",
+                          score.isCurrentUser &&
+                            "text-sky-700 dark:text-sky-300",
+                        )}
+                      >
                         {score.nickname}
                       </TableCell>
                       <TableCell className="tabular-nums">
@@ -189,7 +216,9 @@ export default async function CompetitionPage({
             </div>
           ) : (
             <p className="rounded-lg border border-dashed border-border bg-muted/40 px-4 py-8 text-center text-sm text-muted-foreground">
-              まだスコアは提出されていません。
+              {isScoreHidden
+                ? "表示できるスコアはありません。"
+                : "まだスコアは提出されていません。"}
             </p>
           )}
         </section>
@@ -201,7 +230,7 @@ export default async function CompetitionPage({
 async function getCompetition(id: number) {
   const supabase = await createClient();
   const tournamentColumns =
-    "id,name,desc,game_title,song_title,difficulty,open_since,open_until,asc_order";
+    "id,name,desc,game_title,song_title,difficulty,open_since,open_until,asc_order,alt_rank,hide_score_hr";
 
   const { data: tournament, error: tournamentError } = await supabase
     .from("tournaments")
@@ -218,10 +247,42 @@ async function getCompetition(id: number) {
   }
 
   const typedTournament = tournament as Tournament;
-  const { data: score, error: scoresError } = await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const currentUserId = user?.id ?? null;
+  const isScoreHidden = shouldHideScore(typedTournament);
+
+  const { count: participantCount, error: countError } = await supabase
     .from("score")
-    .select("id,score,updated_at,created_at,image_url,comment,users(nickname)")
-    .eq("tournament_id", id)
+    .select("id", { count: "exact", head: true })
+    .eq("tournament_id", id);
+
+  if (countError != null) {
+    throw new Error(countError.message);
+  }
+
+  if (isScoreHidden && currentUserId == null) {
+    return {
+      tournament: typedTournament,
+      ranking: [],
+      participantCount: participantCount ?? 0,
+      isScoreHidden,
+    };
+  }
+
+  let scoresQuery = supabase
+    .from("score")
+    .select(
+      "id,user_uid,score,updated_at,created_at,image_url,comment,users(nickname)",
+    )
+    .eq("tournament_id", id);
+
+  if (isScoreHidden) {
+    scoresQuery = scoresQuery.eq("user_uid", currentUserId);
+  }
+
+  const { data: score, error: scoresError } = await scoresQuery
     .order("score", { ascending: typedTournament.asc_order === true })
     .order("updated_at", { ascending: true });
 
@@ -231,20 +292,48 @@ async function getCompetition(id: number) {
 
   return {
     tournament: typedTournament,
-    ranking: buildRanking((score ?? []) as ScoreRow[]),
+    ranking: buildRanking((score ?? []) as ScoreRow[], {
+      currentUserId,
+      hideRank: isScoreHidden,
+      useAltRank: typedTournament.alt_rank === true,
+    }),
+    participantCount: participantCount ?? score?.length ?? 0,
+    isScoreHidden,
   };
 }
 
-function buildRanking(scores: ScoreRow[]): RankingScore[] {
-  return scores.map((score, index) => ({
-    id: score.id,
-    rank: index + 1,
-    nickname: getNickname(score.users),
-    score: score.score,
-    updatedAt: score.updated_at ?? score.created_at,
-    imageUrl: score.image_url,
-    comment: score.comment,
-  }));
+function buildRanking(
+  scores: ScoreRow[],
+  options: {
+    currentUserId: string | null;
+    hideRank: boolean;
+    useAltRank: boolean;
+  },
+): RankingScore[] {
+  let previousScore: number | null = null;
+  let previousRank = 0;
+
+  return scores.map((score, index) => {
+    const rank =
+      options.useAltRank && previousScore === score.score
+        ? previousRank
+        : index + 1;
+
+    previousScore = score.score;
+    previousRank = rank;
+
+    return {
+      id: score.id,
+      userUid: score.user_uid,
+      rank: options.hideRank ? null : rank,
+      nickname: getNickname(score.users),
+      score: score.score,
+      updatedAt: score.updated_at ?? score.created_at,
+      imageUrl: score.image_url,
+      comment: score.comment,
+      isCurrentUser: options.currentUserId === score.user_uid,
+    };
+  });
 }
 
 function getNickname(users: ScoreRow["users"]) {
@@ -268,6 +357,18 @@ function getTournamentStatus(tournament: Tournament) {
   }
 
   return "開催中";
+}
+
+function shouldHideScore(tournament: Tournament) {
+  if (tournament.hide_score_hr <= 0) {
+    return false;
+  }
+
+  const now = Date.now();
+  const endsAt = new Date(tournament.open_until).getTime();
+  const startsHidingAt = endsAt - tournament.hide_score_hr * 60 * 60 * 1000;
+
+  return now >= startsHidingAt && now <= endsAt;
 }
 
 function formatPeriod(tournament: Tournament) {
