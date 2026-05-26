@@ -1,4 +1,4 @@
-import { CircleUserRound } from "lucide-react";
+import { CircleUserRound, Info } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
@@ -20,25 +20,26 @@ export default async function SiteHeader() {
         </Link>
         <div className="flex items-center gap-2">
           <ModeToggle />
-          {isLoggedIn ? (
-            <Link href="/dashboard">
-              <Button
-                size="icon"
-                className="border border-sky-300 bg-transparent"
-              >
-                <CircleUserRound />
-              </Button>
+          <Button
+            asChild
+            size="icon"
+            variant="outline"
+            className="border-sky-300 bg-transparent hover:bg-sky-400 hover:text-white"
+          >
+            <Link href="/about">
+              <Info />
             </Link>
-          ) : (
-            <Link href="/auth/sign-in">
-              <Button
-                size="icon"
-                className="border border-sky-300 bg-transparent"
-              >
-                <CircleUserRound />
-              </Button>
+          </Button>
+          <Button
+            asChild
+            size="icon"
+            variant="outline"
+            className="border-sky-300 bg-transparent hover:bg-sky-400 hover:text-white"
+          >
+            <Link href={isLoggedIn ? "/dashboard" : "/auth/sign-in"}>
+              <CircleUserRound />
             </Link>
-          )}
+          </Button>
         </div>
       </div>
     </div>
