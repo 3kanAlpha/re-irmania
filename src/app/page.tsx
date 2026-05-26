@@ -1,3 +1,4 @@
+import { CalendarPlusIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -69,42 +70,52 @@ async function AuthGuide() {
   const isLoggedIn = user != null;
 
   return (
-    <div className="mt-6 pl-4">
-      {isLoggedIn ? (
-        <p className="text-sm">
-          スコア登録のやり方:
-          <br />
-          1. ログインページからログインする。
-          <br />
-          2.{" "}
-          <Link
-            href="/dashboard"
-            className="text-sky-600 dark:text-sky-400 hover:underline"
-          >
-            アカウント設定ページ
+    <div className="mt-6">
+      <div className="pl-4">
+        {isLoggedIn ? (
+          <p className="text-sm">
+            スコア登録のやり方:
+            <br />
+            1. ログインページからログインする。
+            <br />
+            2.{" "}
+            <Link
+              href="/dashboard"
+              className="text-sky-600 dark:text-sky-400 hover:underline"
+            >
+              アカウント設定ページ
+            </Link>
+            から名前を登録する。
+            <br />
+            3. 各大会のページからスコアを登録する。
+          </p>
+        ) : (
+          <p className="text-sm">
+            スコア登録のやり方:
+            <br />
+            1.{" "}
+            <Link
+              href="/auth/sign-in"
+              className="text-sky-600 dark:text-sky-400 hover:underline"
+            >
+              ログインページ
+            </Link>
+            からログインする。
+            <br />
+            2. アカウント設定ページから名前を登録する。
+            <br />
+            3. 各大会のページからスコアを登録する。
+          </p>
+        )}
+      </div>
+      <div className="mt-6 flex justify-center">
+        <Button asChild size="xl" className="w-full sm:w-auto">
+          <Link href="/new">
+            <CalendarPlusIcon />
+            大会を作成
           </Link>
-          から名前を登録する。
-          <br />
-          3. 各大会のページからスコアを登録する。
-        </p>
-      ) : (
-        <p className="text-sm">
-          スコア登録のやり方:
-          <br />
-          1.{" "}
-          <Link
-            href="/auth/sign-in"
-            className="text-sky-600 dark:text-sky-400 hover:underline"
-          >
-            ログインページ
-          </Link>
-          からログインする。
-          <br />
-          2. アカウント設定ページから名前を登録する。
-          <br />
-          3. 各大会のページからスコアを登録する。
-        </p>
-      )}
+        </Button>
+      </div>
     </div>
   );
 }
