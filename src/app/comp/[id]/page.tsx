@@ -1,7 +1,8 @@
-import { Crown, ExternalLink, Lock } from "lucide-react";
+import { Crown, ExternalLink, Lock, SquarePen, Trash2 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -13,6 +14,7 @@ import {
 import { formatDateTime } from "@/lib/date-utils";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
+import { DeleteCompetitionButton } from "./_components/delete-competition-button";
 
 type Tournament = {
   id: number;
@@ -26,6 +28,7 @@ type Tournament = {
   asc_order: boolean | null;
   alt_rank: boolean | null;
   hide_score_hr: number;
+  created_by: string | null;
 };
 
 type ScoreRow = {
@@ -104,8 +107,14 @@ export default async function CompetitionPage({
     notFound();
   }
 
-  const { tournament, ranking, participantCount, isScoreHidden } =
-    await getCompetition(id);
+  const {
+    tournament,
+    ranking,
+    participantCount,
+    isScoreHidden,
+    canDelete,
+    canSubmit,
+  } = await getCompetition(id);
 
   return (
     <main className="mx-auto w-full max-w-5xl px-3 py-6 sm:px-4">
@@ -146,6 +155,25 @@ export default async function CompetitionPage({
             <p className="whitespace-pre-wrap break-words leading-7">
               {tournament.desc}
             </p>
+          </div>
+        )}
+
+        {(canSubmit || canDelete) && (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {canSubmit && (
+              <Button asChild size="lg" className="w-full sm:w-auto">
+                <Link href={`/comp/${tournament.id}/submit`}>
+                  <SquarePen data-icon="inline-start" />
+                  スコア提出
+                </Link>
+              </Button>
+            )}
+            {canDelete && (
+              <DeleteCompetitionButton tournamentId={tournament.id}>
+                <Trash2 data-icon="inline-start" />
+                大会を削除
+              </DeleteCompetitionButton>
+            )}
           </div>
         )}
 
@@ -248,7 +276,7 @@ export default async function CompetitionPage({
 async function getCompetition(id: number) {
   const supabase = await createClient();
   const tournamentColumns =
-    "id,name,desc,game_title,song_title,difficulty,open_since,open_until,asc_order,alt_rank,hide_score_hr";
+    "id,name,desc,game_title,song_title,difficulty,open_since,open_until,asc_order,alt_rank,hide_score_hr,created_by";
 
   const { data: tournament, error: tournamentError } = await supabase
     .from("tournaments")
@@ -270,6 +298,9 @@ async function getCompetition(id: number) {
   } = await supabase.auth.getUser();
   const currentUserId = user?.id ?? null;
   const isScoreHidden = shouldHideScore(typedTournament);
+  const canSubmit = currentUserId != null && isTournamentOpen(typedTournament);
+  const canDelete =
+    currentUserId != null && typedTournament.created_by === currentUserId;
 
   const { count: participantCount, error: countError } = await supabase
     .from("score")
@@ -286,6 +317,8 @@ async function getCompetition(id: number) {
       ranking: [],
       participantCount: participantCount ?? 0,
       isScoreHidden,
+      canSubmit,
+      canDelete,
     };
   }
 
@@ -317,6 +350,8 @@ async function getCompetition(id: number) {
     }),
     participantCount: participantCount ?? score?.length ?? 0,
     isScoreHidden,
+    canSubmit,
+    canDelete,
   };
 }
 
@@ -387,6 +422,14 @@ function shouldHideScore(tournament: Tournament) {
   const startsHidingAt = endsAt - tournament.hide_score_hr * 60 * 60 * 1000;
 
   return now >= startsHidingAt && now <= endsAt;
+}
+
+function isTournamentOpen(tournament: Tournament) {
+  const now = Date.now();
+  const startsAt = new Date(tournament.open_since).getTime();
+  const endsAt = new Date(tournament.open_until).getTime();
+
+  return now >= startsAt && now <= endsAt;
 }
 
 function formatPeriod(tournament: Tournament) {

@@ -112,7 +112,7 @@ export default async function SubmitPage({ params }: SubmitPageProps) {
       <section className="space-y-5">
         <div className="space-y-3">
           <div className="inline-flex rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white">
-            スコア受付中
+            スコア提出受付中
           </div>
           <h1 className="text-2xl font-bold leading-tight break-words sm:text-3xl">
             {typedTournament.name}
