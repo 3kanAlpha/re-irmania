@@ -78,12 +78,18 @@ export async function generateMetadata({
     title: data?.name ?? "大会",
     description,
     openGraph: {
-      title: `${data?.name} | IRmania`,
+      title: `${data?.name}`,
       description,
       url: `/comp/${id}`,
       siteName: "IRmania",
       locale: "ja_JP",
       type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${data?.name}`,
+      description,
+      creator: "@luigi_0829_2",
     },
   };
 }
