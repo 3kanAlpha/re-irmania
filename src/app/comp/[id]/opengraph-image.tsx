@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { formatDateTime } from "@/lib/date-utils";
 import { createClient } from "@/lib/supabase/server";
 
 type Tournament = {
@@ -263,15 +264,4 @@ function formatPeriod(tournament: Tournament) {
   const end = formatDateTime(tournament.open_until);
 
   return `${start} - ${end}`;
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Tokyo",
-  }).format(new Date(value));
 }

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
+import { formatDateTime } from "@/lib/date-utils";
 import { createClient } from "@/lib/supabase/server";
 
 type Tournament = {
@@ -372,16 +373,6 @@ function formatPeriod(tournament: Tournament) {
 
 function formatEndLabel(openUntil: string) {
   return `${formatDateTime(openUntil)} 終了`;
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Tokyo",
-  }).format(new Date(value));
 }
 
 function GitHubInvertocatIcon() {
