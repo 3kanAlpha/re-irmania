@@ -273,19 +273,17 @@ function TournamentCard({
         className="block rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <article className="rounded-lg border border-sky-500/30 bg-sky-50/80 p-4 shadow-sm shadow-sky-900/5 transition-colors hover:border-sky-600/50 hover:bg-sky-100/80 dark:bg-sky-900/25 dark:hover:bg-sky-900/35">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="mb-2 inline-flex rounded-full bg-sky-600 px-2.5 py-1 text-xs font-medium text-white">
-                開催中
-              </div>
-              <h4 className="text-2xl font-semibold leading-tight break-words">
-                {tournament.name}
-              </h4>
+          <div className="flex items-start justify-between">
+            <div className="mb-2 inline-flex rounded-full bg-sky-600 px-2.5 py-1 text-xs font-medium text-white">
+              開催中
             </div>
-            <div className="shrink-0 text-right text-sm font-medium text-sky-900 dark:text-sky-100">
+            <div className="text-right text-sm font-medium text-sky-900 dark:text-sky-100">
               {formatEndLabel(tournament.open_until)}
             </div>
           </div>
+          <h4 className="text-2xl font-semibold leading-tight break-words">
+            {tournament.name}
+          </h4>
           <div className="mt-4 min-w-0 rounded-lg bg-background/80 px-4 py-3 ring-1 ring-foreground/10">
             <p className="text-xs text-muted-foreground">課題曲</p>
             <p className="mt-1 text-xl font-semibold leading-tight break-words">
@@ -293,7 +291,10 @@ function TournamentCard({
             </p>
           </div>
           <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
-            <TournamentDetail label="ゲーム" value={tournament.game_title} />
+            <TournamentDetail
+              label="ゲームタイトル"
+              value={tournament.game_title}
+            />
             <TournamentDetail label="期間" value={formatPeriod(tournament)} />
           </dl>
         </article>

@@ -140,7 +140,7 @@ export default async function CompetitionPage({
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-16 text-center">順位</TableHead>
-                    <TableHead>プレイヤー</TableHead>
+                    <TableHead className="min-w-32">プレイヤー</TableHead>
                     <TableHead>スコア</TableHead>
                     <TableHead>更新日時</TableHead>
                     <TableHead>リザルト</TableHead>
