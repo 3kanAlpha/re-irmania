@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://iir.mgcup.net"),
   title: {
     default: "IRmania (Next)",
     template: "%s | IRmania (Next)",

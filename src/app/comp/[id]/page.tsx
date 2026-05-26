@@ -72,8 +72,19 @@ export async function generateMetadata({
     .eq("id", id)
     .maybeSingle();
 
+  const description = `「${data?.name}」の順位表ページです`;
+
   return {
     title: data?.name ?? "大会",
+    description,
+    openGraph: {
+      title: `${data?.name} | IRmania`,
+      description,
+      url: `/comp/${id}`,
+      siteName: "IRmania",
+      locale: "ja_JP",
+      type: "website",
+    },
   };
 }
 
