@@ -182,19 +182,19 @@ async function getTournamentGroups(): Promise<TournamentGroups> {
       .lte("open_since", now)
       .gte("open_until", now)
       .order("open_until", { ascending: true })
-      .limit(5),
+      .limit(10),
     supabase
       .from("tournaments")
       .select(tournamentColumns)
       .gt("open_since", now)
       .order("open_since", { ascending: true })
-      .limit(5),
+      .limit(10),
     supabase
       .from("tournaments")
       .select(tournamentColumns)
       .lt("open_until", now)
       .order("id", { ascending: false })
-      .limit(5),
+      .limit(10),
   ]);
 
   if (current.error != null) {
