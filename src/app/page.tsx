@@ -3,6 +3,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime } from "@/lib/date-utils";
 import { createClient } from "@/lib/supabase/server";
@@ -18,12 +27,38 @@ type Tournament = {
 };
 
 type TournamentGroups = {
-  current: Tournament[];
-  upcoming: Tournament[];
-  finished: Tournament[];
+  current: TournamentPage;
+  upcoming: TournamentPage;
+  finished: TournamentPage;
 };
 
-export default function Home() {
+type TournamentKind = keyof TournamentGroups;
+
+type TournamentPage = {
+  tournaments: Tournament[];
+  currentPage: number;
+  totalCount: number;
+  totalPages: number;
+};
+
+type HomeProps = {
+  searchParams?: Promise<{
+    currentPage?: string | string[];
+    upcomingPage?: string | string[];
+    finishedPage?: string | string[];
+  }>;
+};
+
+const TOURNAMENTS_PER_PAGE = 10;
+
+export default async function Home({ searchParams }: HomeProps) {
+  const params = await searchParams;
+  const pages = {
+    current: parsePage(params?.currentPage),
+    upcoming: parsePage(params?.upcomingPage),
+    finished: parsePage(params?.finishedPage),
+  };
+
   return (
     <div className="w-full max-w-3xl mx-auto py-6 px-3">
       <div>
@@ -55,7 +90,7 @@ export default function Home() {
       </Suspense>
       <div className="mt-6">
         <Suspense fallback={<TournamentSectionSkeleton />}>
-          <TournamentSection />
+          <TournamentSection pages={pages} />
         </Suspense>
       </div>
     </div>
@@ -133,8 +168,12 @@ function AuthGuideSkeleton() {
   );
 }
 
-async function TournamentSection() {
-  const groups = await getTournamentGroups();
+async function TournamentSection({
+  pages,
+}: {
+  pages: Record<TournamentKind, number>;
+}) {
+  const groups = await getTournamentGroups(pages);
 
   return (
     <section aria-labelledby="tournaments-heading" className="space-y-6">
@@ -150,26 +189,31 @@ async function TournamentSection() {
       <TournamentGroup
         emptyText="現在開催中の大会はありません。"
         kind="current"
-        tournaments={groups.current}
+        page={groups.current}
+        searchPages={pages}
         title="開催中の大会"
       />
       <TournamentGroup
         emptyText="開催予定の大会はありません。"
         kind="upcoming"
-        tournaments={groups.upcoming}
+        page={groups.upcoming}
+        searchPages={pages}
         title="開催予定の大会"
       />
       <TournamentGroup
         emptyText="終了済みの大会はありません。"
         kind="finished"
-        tournaments={groups.finished}
+        page={groups.finished}
+        searchPages={pages}
         title="終了済みの大会"
       />
     </section>
   );
 }
 
-async function getTournamentGroups(): Promise<TournamentGroups> {
+async function getTournamentGroups(
+  pages: Record<TournamentKind, number>,
+): Promise<TournamentGroups> {
   const supabase = await createClient();
   const now = new Date().toISOString();
   const tournamentColumns =
@@ -178,23 +222,23 @@ async function getTournamentGroups(): Promise<TournamentGroups> {
   const [current, upcoming, finished] = await Promise.all([
     supabase
       .from("tournaments")
-      .select(tournamentColumns)
+      .select(tournamentColumns, { count: "exact" })
       .lte("open_since", now)
       .gte("open_until", now)
       .order("open_until", { ascending: true })
-      .limit(10),
+      .range(getPageStart(pages.current), getPageEnd(pages.current)),
     supabase
       .from("tournaments")
-      .select(tournamentColumns)
+      .select(tournamentColumns, { count: "exact" })
       .gt("open_since", now)
       .order("open_since", { ascending: true })
-      .limit(10),
+      .range(getPageStart(pages.upcoming), getPageEnd(pages.upcoming)),
     supabase
       .from("tournaments")
-      .select(tournamentColumns)
+      .select(tournamentColumns, { count: "exact" })
       .lt("open_until", now)
       .order("id", { ascending: false })
-      .limit(10),
+      .range(getPageStart(pages.finished), getPageEnd(pages.finished)),
   ]);
 
   if (current.error != null) {
@@ -208,24 +252,35 @@ async function getTournamentGroups(): Promise<TournamentGroups> {
   }
 
   return {
-    current: (current.data ?? []) as Tournament[],
-    upcoming: (upcoming.data ?? []) as Tournament[],
-    finished: (finished.data ?? []) as Tournament[],
+    current: createTournamentPage(current.data, current.count, pages.current),
+    upcoming: createTournamentPage(
+      upcoming.data,
+      upcoming.count,
+      pages.upcoming,
+    ),
+    finished: createTournamentPage(
+      finished.data,
+      finished.count,
+      pages.finished,
+    ),
   };
 }
 
 function TournamentGroup({
   emptyText,
   kind,
+  page,
+  searchPages,
   title,
-  tournaments,
 }: {
   emptyText: string;
-  kind: "current" | "upcoming" | "finished";
+  kind: TournamentKind;
+  page: TournamentPage;
+  searchPages: Record<TournamentKind, number>;
   title: string;
-  tournaments: Tournament[];
 }) {
   const isCurrent = kind === "current";
+  const { currentPage, totalCount, totalPages, tournaments } = page;
 
   return (
     <section
@@ -241,9 +296,7 @@ function TournamentGroup({
         >
           {title}
         </h3>
-        <span className="text-xs text-muted-foreground">
-          {tournaments.length}件
-        </span>
+        <span className="text-xs text-muted-foreground">{totalCount}件</span>
       </div>
       {tournaments.length > 0 ? (
         <div className={isCurrent ? "space-y-3" : "grid gap-2"}>
@@ -266,6 +319,14 @@ function TournamentGroup({
           {emptyText}
         </p>
       )}
+      {totalPages > 1 ? (
+        <TournamentPagination
+          currentPage={currentPage}
+          kind={kind}
+          searchPages={searchPages}
+          totalPages={totalPages}
+        />
+      ) : null}
     </section>
   );
 }
@@ -374,6 +435,153 @@ function TournamentSectionSkeleton() {
       </div>
     </section>
   );
+}
+
+function TournamentPagination({
+  currentPage,
+  kind,
+  searchPages,
+  totalPages,
+}: {
+  currentPage: number;
+  kind: TournamentKind;
+  searchPages: Record<TournamentKind, number>;
+  totalPages: number;
+}) {
+  const pages = getVisiblePages(currentPage, totalPages);
+
+  return (
+    <Pagination className="pt-1">
+      <PaginationContent className="flex-wrap">
+        <PaginationItem>
+          <PaginationPrevious
+            aria-disabled={currentPage <= 1}
+            className={
+              currentPage <= 1 ? "pointer-events-none opacity-50" : undefined
+            }
+            href={getTournamentPageHref(kind, currentPage - 1, searchPages)}
+            text="前へ"
+          />
+        </PaginationItem>
+        {pages.map((page) =>
+          typeof page === "string" ? (
+            <PaginationItem key={`${kind}-${page}`}>
+              <PaginationEllipsis />
+            </PaginationItem>
+          ) : (
+            <PaginationItem key={page}>
+              <PaginationLink
+                href={getTournamentPageHref(kind, page, searchPages)}
+                isActive={page === currentPage}
+              >
+                {page}
+              </PaginationLink>
+            </PaginationItem>
+          ),
+        )}
+        <PaginationItem>
+          <PaginationNext
+            aria-disabled={currentPage >= totalPages}
+            className={
+              currentPage >= totalPages
+                ? "pointer-events-none opacity-50"
+                : undefined
+            }
+            href={getTournamentPageHref(kind, currentPage + 1, searchPages)}
+            text="次へ"
+          />
+        </PaginationItem>
+      </PaginationContent>
+    </Pagination>
+  );
+}
+
+function parsePage(value: string | string[] | undefined) {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  const page = Number.parseInt(rawValue ?? "", 10);
+
+  if (!Number.isFinite(page) || page < 1) {
+    return 1;
+  }
+
+  return page;
+}
+
+function getPageStart(page: number) {
+  return (page - 1) * TOURNAMENTS_PER_PAGE;
+}
+
+function getPageEnd(page: number) {
+  return getPageStart(page) + TOURNAMENTS_PER_PAGE - 1;
+}
+
+function createTournamentPage(
+  data: unknown[] | null,
+  count: number | null,
+  currentPage: number,
+): TournamentPage {
+  const totalCount = count ?? 0;
+
+  return {
+    currentPage,
+    totalCount,
+    totalPages: Math.ceil(totalCount / TOURNAMENTS_PER_PAGE),
+    tournaments: (data ?? []) as Tournament[],
+  };
+}
+
+function getTournamentPageHref(
+  kind: TournamentKind,
+  page: number,
+  searchPages: Record<TournamentKind, number>,
+) {
+  const params = new URLSearchParams();
+  const nextPages = {
+    ...searchPages,
+    [kind]: Math.max(page, 1),
+  };
+
+  for (const tournamentKind of Object.keys(nextPages) as TournamentKind[]) {
+    const nextPage = nextPages[tournamentKind];
+
+    if (nextPage > 1) {
+      params.set(getTournamentPageParam(tournamentKind), String(nextPage));
+    }
+  }
+
+  const query = params.toString();
+
+  return `/${query ? `?${query}` : ""}#${kind}-tournaments-heading`;
+}
+
+function getTournamentPageParam(kind: TournamentKind) {
+  return `${kind}Page`;
+}
+
+function getVisiblePages(currentPage: number, totalPages: number) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages: Array<number | "start-ellipsis" | "end-ellipsis"> = [1];
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+
+  if (start > 2) {
+    pages.push("start-ellipsis");
+  }
+
+  for (let page = start; page <= end; page += 1) {
+    pages.push(page);
+  }
+
+  if (end < totalPages - 1) {
+    pages.push("end-ellipsis");
+  }
+
+  pages.push(totalPages);
+
+  return pages;
 }
 
 function formatPeriod(tournament: Tournament) {
