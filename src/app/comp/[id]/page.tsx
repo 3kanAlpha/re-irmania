@@ -66,6 +66,7 @@ export async function generateMetadata({
   if (!Number.isSafeInteger(id)) {
     return {
       title: "大会",
+      robots: { index: false },
     };
   }
 
@@ -80,6 +81,7 @@ export async function generateMetadata({
 
   return {
     title: data?.name ?? "大会",
+    robots: { index: false },
     description,
     openGraph: {
       title: `${data?.name}`,
